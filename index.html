@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REQUERIMIENTO DE MATERIALES</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #22c55e;
+      --danger: #fb923c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, var(--bg), #020617);
+      color: var(--text);
+      padding: 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(17,24,39,0.95);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    h1 { margin-top: 0; font-size: 1.8rem; }
+    .header { display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56,189,248,0.16);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .controls {
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;
+    }
+    select, input, button {
+      border: 0; border-radius: 10px; padding: 10px 12px; font-size: 0.95rem;
+    }
+    select, input { background:#0f172a; color:var(--text); border:1px solid rgba(255,255,255,0.12); min-width:220px; }
+    button { background: var(--accent); color:#082f49; font-weight:700; cursor:pointer; }
+    .summary {
+      display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; margin-bottom:16px;
+    }
+    .card {
+      background: var(--panel-2); border-radius: 14px; padding: 14px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .summary-section { margin-top: 20px; }
+    .summary-section h3 { margin: 0 0 10px 0; font-size: 1rem; }
+    .charts { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 18px 0 24px; }
+    .chart-card { background: linear-gradient(135deg, rgba(56,189,248,0.14), rgba(17,24,39,0.95)); border-radius: 18px; padding: 18px; border: 1px solid rgba(56,189,248,0.25); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+    .chart-card h4 { margin: 0 0 10px; font-size: 1rem; color: #e2e8f0; }
+    .chart-card svg { width: 100%; height: auto; display: block; }
+    .chart-card svg text {
+      fill: #f8fafc;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      user-select: none;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: rgba(15, 23, 42, 0.95);
+      stroke-width: 3px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .chart-card .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; color: var(--muted); font-size:0.82rem; }
+    .legend-item { display:flex; align-items:center; gap:6px; }
+    .legend-item .dot { width:10px; height:10px; border-radius:999px; background: var(--accent); }
+    .card .label { color: var(--muted); font-size:0.9rem; margin-bottom:4px; }
+    .collapsible { border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; background: var(--panel-2); overflow: hidden; margin-top: 16px; }
+    .collapsible summary { cursor: pointer; padding: 12px 14px; font-weight: 700; list-style: none; }
+    .collapsible summary::-webkit-details-marker { display: none; }
+    .collapsible .content { padding: 0 14px 14px; }
+    .card .value { font-size:1.28rem; font-weight:700; }
+    table { width:100%; border-collapse: collapse; overflow:hidden; border-radius: 12px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align:left; }
+    thead { background: rgba(56,189,248,0.14); }
+    tbody tr:hover { background: rgba(255,255,255,0.04); }
+    .status { color: var(--muted); font-size:0.9rem; }
+    .pill {
+      display:inline-block; padding:4px 8px; border-radius:999px; font-size:0.82rem; font-weight:700;
+    }
+    .pill.ok { background: rgba(34,197,85,0.14); color: var(--accent-2); }
+    .pill.warn { background: rgba(251,146,60,0.14); color: var(--danger); }
+    .footnote { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Dashboard de cantidades requeridas</h1>
+        <div class="status">Se calcula: cantidad requerida = LARGO (mm) × CANT TOTAL ÷ 6000</div>
+      </div>
+      <div id="fileBadge" class="badge">Archivo: ENT-1 ESTRUCTURA TARAPOA_ (1).xlsx</div>
+    </div>
+
+    <div class="controls">
+      <label for="sheetSelect">Hoja</label>
+      <select id="sheetSelect"></select>
+      <label for="itemFilter">Filtrar por ITEM</label>
+      <input id="itemFilter" placeholder="Ej. M1, TCL1, PL..." />
+      <input id="fileInput" type="file" accept=".xlsx,.xlsm,.xls" hidden />
+      <button id="loadButton" type="button">Cargar Excel</button>
+      <button id="refreshButton" type="button">Actualizar datos</button>
+      <button id="exportButton" type="button">Exportar Excel</button>
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <div class="label">Registros analizados</div>
+        <div id="totalRows" class="value">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Ítems únicos</div>
+        <div id="uniqueItems" class="value">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Total calculado</div>
+        <div id="totalCalculated" class="value">0</div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card">
+        <h4>Distribución por sección</h4>
+        <svg id="sectionChart" viewBox="0 0 360 260"></svg>
+        <div class="legend">
+          <div class="legend-item"><span class="dot"></span> Cantidad requerida acumulada</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Distribución por ancho</h4>
+        <svg id="widthChart" viewBox="0 0 360 260"></svg>
+        <div class="legend">
+          <div class="legend-item"><span class="dot"></span> Agrupación por ancho</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Estado de ítems</h4>
+        <svg id="statusChart" viewBox="0 0 360 260"></svg>
+        <div class="legend">
+          <div class="legend-item"><span class="dot" style="background:#22c55e"></span> EN PLANTA</div>
+          <div class="legend-item"><span class="dot" style="background:#fb923c"></span> POR LLEGAR</div>
+        </div>
+      </div>
+    </div>
+
+    <details class="collapsible" open>
+      <summary>Detalle de registros</summary>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>ITEM</th>
+              <th>SECCION</th>
+              <th>CODIGO</th>
+              <th>LARGO (mm)</th>
+              <th>ANCHO (mm)</th>
+              <th>CANT TOTAL</th>
+              <th>Cantidad requerida</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="collapsible">
+      <summary>Resumen por sección y ancho</summary>
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>SECCION</th>
+              <th>ANCHO (mm)</th>
+              <th>Cantidad requerida total</th>
+              <th>Cantidad total a comprar</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="groupedResultsBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <div id="statusMessage" class="footnote">Esperando datos…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    const sheetSelect = document.getElementById('sheetSelect');
+    const itemFilter = document.getElementById('itemFilter');
+    const fileInput = document.getElementById('fileInput');
+    const loadButton = document.getElementById('loadButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const exportButton = document.getElementById('exportButton');
+    const fileBadge = document.getElementById('fileBadge');
+    const resultsBody = document.getElementById('resultsBody');
+    const groupedResultsBody = document.getElementById('groupedResultsBody');
+    const statusMessage = document.getElementById('statusMessage');
+    const totalRowsEl = document.getElementById('totalRows');
+    const uniqueItemsEl = document.getElementById('uniqueItems');
+    const totalCalculatedEl = document.getElementById('totalCalculated');
+    const sectionChart = document.getElementById('sectionChart');
+    const widthChart = document.getElementById('widthChart');
+    const statusChart = document.getElementById('statusChart');
+
+    let workbook = null;
+    let rows = [];
+    let currentFileName = 'ENT-1 ESTRUCTURA TARAPOA_ (1).xlsx';
+    let groupStatusMap = {};
+
+    function normalizeCell(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).trim();
+    }
+
+    function populateSheets(wb) {
+      workbook = wb;
+      sheetSelect.innerHTML = '';
+      wb.SheetNames.forEach((name) => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        sheetSelect.appendChild(option);
+      });
+      if (wb.SheetNames.length) {
+        sheetSelect.value = wb.SheetNames[0];
+      }
+    }
+
+    function updateFileBadge(fileName) {
+      currentFileName = fileName || currentFileName;
+      if (fileBadge) {
+        fileBadge.textContent = `Archivo: ${currentFileName}`;
+      }
+    }
+
+    function parseWorkbook(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = e.target.result;
+        const wb = XLSX.read(data, { type: 'array' });
+        populateSheets(wb);
+        updateFileBadge(file.name);
+        statusMessage.textContent = 'Libro cargado. Se están actualizando tablas y gráficas.';
+        loadSheetData();
+      };
+      reader.onerror = function () {
+        statusMessage.textContent = 'No se pudo leer el archivo seleccionado.';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function calculateRequiredQuantity(row) {
+      const largo = parseFloat(String(row.largo).replace(/[^0-9.-]/g, '')) || 0;
+      const cantTotal = parseFloat(String(row.cantTotal).replace(/[^0-9.-]/g, '')) || 0;
+      return largo * cantTotal / 6000;
+    }
+
+    function isNumericItem(value) {
+      const text = normalizeCell(value);
+      if (!text) return false;
+      return /^\d+(\.\d+)?$/.test(text);
+    }
+
+    function getWidthValue(row) {
+      const widthText = normalizeCell(row.ancho);
+      if (!widthText) return '';
+      const parsed = parseFloat(widthText.replace(/[^0-9.-]/g, ''));
+      return Number.isFinite(parsed) && parsed !== 0 ? parsed : '';
+    }
+
+    function getGroupState(groupKey) {
+      return groupStatusMap[groupKey] || 'SIN ESPECIFICAR';
+    }
+
+    function setGroupState(groupKey, value) {
+      const normalizedValue = value === 'POR LLEGAR' ? 'POR LLEGAR' : value === 'EN PLANTA' ? 'EN PLANTA' : 'SIN ESPECIFICAR';
+      groupStatusMap[groupKey] = normalizedValue;
+    }
+
+    function drawSectionChart(filteredRows) {
+      const grouped = filteredRows.reduce((acc, row) => {
+        const section = normalizeCell(row.seccion) || 'SIN SECCIÓN';
+        acc[section] = (acc[section] || 0) + calculateRequiredQuantity(row);
+        return acc;
+      }, {});
+
+      const entries = Object.entries(grouped).sort((a, b) => b[1] - a[1]);
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const width = 360;
+      const height = 240;
+      const margin = { top: 20, right: 24, bottom: 56, left: 48 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const maxValue = Math.max(...entries.map(([, value]) => value), 1);
+      const barGap = 12;
+      const safeEntryCount = Math.max(entries.length, 1);
+      const availableBarWidth = Math.max(plotWidth - barGap * Math.max(safeEntryCount - 1, 0), 0);
+      const barWidth = Math.max(availableBarWidth / safeEntryCount, 18);
+      const totalBarWidth = barWidth * safeEntryCount + barGap * Math.max(safeEntryCount - 1, 0);
+      const chartStartX = margin.left + Math.max((plotWidth - totalBarWidth) / 2, 0);
+      const axisY = margin.top + plotHeight;
+
+      sectionChart.innerHTML = '';
+      sectionChart.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      sectionChart.setAttribute('xmlns', svgNS);
+
+      if (!entries.length) {
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', 20);
+        text.setAttribute('y', 120);
+        text.setAttribute('fill', '#94a3b8');
+        text.setAttribute('font-size', '12');
+        text.textContent = 'Sin datos';
+        sectionChart.appendChild(text);
+        return;
+      }
+
+      const axis = document.createElementNS(svgNS, 'line');
+      axis.setAttribute('x1', margin.left);
+      axis.setAttribute('x2', margin.left + plotWidth);
+      axis.setAttribute('y1', axisY);
+      axis.setAttribute('y2', axisY);
+      axis.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+      axis.setAttribute('stroke-width', '1');
+      sectionChart.appendChild(axis);
+
+      entries.forEach(([label, value], index) => {
+        const x = chartStartX + index * (barWidth + barGap);
+        const barHeight = (value / maxValue) * plotHeight;
+        const y = axisY - barHeight;
+
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', Math.max(barHeight, 4));
+        rect.setAttribute('rx', 6);
+        rect.setAttribute('fill', '#38bdf8');
+        sectionChart.appendChild(rect);
+
+        const labelText = String(label).slice(0, 10);
+        const labelBoxWidth = Math.max(26, Math.min(70, labelText.length * 6));
+        const labelBox = document.createElementNS(svgNS, 'rect');
+        labelBox.setAttribute('x', x + barWidth / 2 - labelBoxWidth / 2);
+        labelBox.setAttribute('y', Math.max(18, y - 18));
+        labelBox.setAttribute('width', labelBoxWidth);
+        labelBox.setAttribute('height', 14);
+        labelBox.setAttribute('rx', 4);
+        labelBox.setAttribute('fill', 'rgba(2, 6, 23, 0.8)');
+        sectionChart.appendChild(labelBox);
+
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', x + barWidth / 2);
+        text.setAttribute('y', Math.max(28, y - 10));
+        text.setAttribute('fill', '#f8fafc');
+        text.setAttribute('font-size', '10');
+        text.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.textContent = labelText;
+        sectionChart.appendChild(text);
+      });
+    }
+
+    function drawWidthChart(filteredRows) {
+      const grouped = filteredRows.reduce((acc, row) => {
+        const width = getWidthValue(row) || 'SIN ANCHO';
+        acc[width] = (acc[width] || 0) + calculateRequiredQuantity(row);
+        return acc;
+      }, {});
+
+      const entries = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      widthChart.innerHTML = '';
+      if (!entries.length) {
+        widthChart.innerHTML = '<text x="20" y="130" fill="#94a3b8">Sin datos</text>';
+        return;
+      }
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const chartWidth = 360;
+      const chartHeight = 240;
+      const margin = { left: 72, right: 60, top: 20, bottom: 20 };
+      const innerWidth = chartWidth - margin.left - margin.right;
+      const innerHeight = chartHeight - margin.top - margin.bottom;
+      const maxValue = Math.max(...entries.map(([, value]) => value), 1);
+      const barHeight = Math.max((innerHeight - (entries.length - 1) * 10) / Math.max(entries.length, 1), 16);
+      widthChart.setAttribute('viewBox', `0 0 ${chartWidth} ${chartHeight}`);
+      widthChart.setAttribute('xmlns', svgNS);
+
+      entries.forEach(([label, value], index) => {
+        const y = margin.top + index * (barHeight + 10);
+        const barW = (value / maxValue) * innerWidth;
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('x', margin.left);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', Math.max(barW, 8));
+        rect.setAttribute('height', barHeight);
+        rect.setAttribute('rx', 6);
+        rect.setAttribute('fill', '#22c55e');
+        widthChart.appendChild(rect);
+
+        const labelText = document.createElementNS(svgNS, 'text');
+        labelText.setAttribute('x', 10);
+        labelText.setAttribute('y', y + barHeight / 1.7);
+        labelText.setAttribute('fill', '#f8fafc');
+        labelText.setAttribute('font-size', '10');
+        labelText.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+        labelText.setAttribute('font-weight', '600');
+        labelText.setAttribute('dominant-baseline', 'middle');
+        labelText.textContent = String(label).slice(0, 12);
+        widthChart.appendChild(labelText);
+
+        const valueText = document.createElementNS(svgNS, 'text');
+        valueText.setAttribute('x', margin.left + Math.max(barW, 8) + 8);
+        valueText.setAttribute('y', y + barHeight / 1.7);
+        valueText.setAttribute('fill', '#cbd5e1');
+        valueText.setAttribute('font-size', '10');
+        valueText.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+        valueText.setAttribute('font-weight', '600');
+        valueText.setAttribute('dominant-baseline', 'middle');
+        valueText.textContent = value.toFixed(1);
+        widthChart.appendChild(valueText);
+      });
+    }
+
+    function drawStatusChart(filteredRows) {
+      const grouped = filteredRows.reduce((acc, row) => {
+        const section = normalizeCell(row.seccion) || '—';
+        const widthValue = getWidthValue(row);
+        const width = widthValue === '' ? '—' : String(widthValue);
+        const key = `${section}||${width}`;
+        if (!acc[key]) {
+          acc[key] = { key, section, width, count: 0 };
+        }
+        acc[key].count += 1;
+        return acc;
+      }, {});
+
+      const groups = Object.values(grouped).sort((a, b) => {
+        const bySection = (a.section || '').localeCompare(b.section || '');
+        if (bySection !== 0) return bySection;
+        return String(a.width).localeCompare(String(b.width));
+      });
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const width = 360;
+      const height = Math.max(240, 80 + groups.length * 28);
+      const margin = { top: 20, right: 24, bottom: 20, left: 12 };
+      const plotWidth = width - margin.left - margin.right;
+      const chartHeight = 20;
+      const gap = 8;
+      const barX = 120;
+      const barWidth = Math.min(180, plotWidth - 110);
+
+      statusChart.innerHTML = '';
+      statusChart.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      statusChart.setAttribute('xmlns', svgNS);
+
+      if (!groups.length) {
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', 20);
+        text.setAttribute('y', 120);
+        text.setAttribute('fill', '#94a3b8');
+        text.setAttribute('font-size', '12');
+        text.textContent = 'Sin datos';
+        statusChart.appendChild(text);
+        return;
+      }
+
+      groups.forEach((group, index) => {
+        const y = margin.top + index * (chartHeight + gap);
+        const state = getGroupState(group.key);
+        const label = `${group.section || '—'} / ${group.width}`;
+        const color = state === 'POR LLEGAR' ? '#fb923c' : state === 'EN PLANTA' ? '#22c55e' : '#38bdf8';
+        const labelText = String(label).slice(0, 24);
+
+        const track = document.createElementNS(svgNS, 'rect');
+        track.setAttribute('x', barX);
+        track.setAttribute('y', y);
+        track.setAttribute('width', barWidth);
+        track.setAttribute('height', chartHeight);
+        track.setAttribute('rx', 6);
+        track.setAttribute('fill', 'rgba(255,255,255,0.08)');
+        statusChart.appendChild(track);
+
+        const rect = document.createElementNS(svgNS, 'rect');
+        rect.setAttribute('x', barX);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', chartHeight);
+        rect.setAttribute('rx', 6);
+        rect.setAttribute('fill', color);
+        statusChart.appendChild(rect);
+
+        const text = document.createElementNS(svgNS, 'text');
+        text.setAttribute('x', 10);
+        text.setAttribute('y', y + chartHeight / 1.8);
+        text.setAttribute('fill', '#f8fafc');
+        text.setAttribute('font-size', '10');
+        text.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.textContent = labelText;
+        statusChart.appendChild(text);
+
+        const stateText = document.createElementNS(svgNS, 'text');
+        stateText.setAttribute('x', barX + barWidth / 2);
+        stateText.setAttribute('y', y + chartHeight / 1.8);
+        stateText.setAttribute('fill', '#ffffff');
+        stateText.setAttribute('font-size', '10');
+        stateText.setAttribute('font-family', 'Arial, Helvetica, sans-serif');
+        stateText.setAttribute('font-weight', '700');
+        stateText.setAttribute('text-anchor', 'middle');
+        stateText.setAttribute('dominant-baseline', 'middle');
+        stateText.textContent = state;
+        statusChart.appendChild(stateText);
+      });
+    }
+
+    function renderGroupedRows(filteredRows) {
+      const grouped = filteredRows.reduce((acc, row) => {
+        const section = normalizeCell(row.seccion);
+        const widthValue = getWidthValue(row);
+        const width = widthValue === '' ? '—' : String(widthValue);
+        const key = `${section}||${width}`;
+        if (!acc[key]) {
+          acc[key] = { key, section, width, total: 0, count: 0 };
+        }
+        acc[key].total += calculateRequiredQuantity(row);
+        acc[key].count += 1;
+        return acc;
+      }, {});
+
+      const groupedArray = Object.values(grouped).sort((a, b) => {
+        const bySection = (a.section || '').localeCompare(b.section || '');
+        if (bySection !== 0) return bySection;
+        return String(a.width).localeCompare(String(b.width));
+      });
+
+      groupedResultsBody.innerHTML = '';
+      if (!groupedArray.length) {
+        groupedResultsBody.innerHTML = '<tr><td colspan="5" class="status">No hay datos para resumir.</td></tr>';
+        return;
+      }
+
+      groupedArray.forEach((group) => {
+        const tr = document.createElement('tr');
+        const roundedBuy = Math.ceil(group.total);
+        const currentStatus = getGroupState(group.key);
+        tr.innerHTML = `
+          <td>${group.section || '—'}</td>
+          <td>${group.width}</td>
+          <td>${group.total.toFixed(2)}</td>
+          <td>${roundedBuy}</td>
+          <td>
+            <select class="status-select" data-group-key="${group.key}">
+              <option value="SIN ESPECIFICAR" ${currentStatus === 'SIN ESPECIFICAR' ? 'selected' : ''}>Sin especificar</option>
+              <option value="EN PLANTA" ${currentStatus === 'EN PLANTA' ? 'selected' : ''}>EN PLANTA</option>
+              <option value="POR LLEGAR" ${currentStatus === 'POR LLEGAR' ? 'selected' : ''}>POR LLEGAR</option>
+            </select>
+          </td>
+        `;
+        groupedResultsBody.appendChild(tr);
+      });
+    }
+
+    function buildExportRows(filteredRows) {
+      const grouped = filteredRows.reduce((acc, row) => {
+        const section = normalizeCell(row.seccion);
+        const widthValue = getWidthValue(row);
+        const width = widthValue === '' ? '—' : String(widthValue);
+        const key = `${section}||${width}`;
+        if (!acc[key]) {
+          acc[key] = { key, section, width, total: 0, count: 0 };
+        }
+        acc[key].total += calculateRequiredQuantity(row);
+        acc[key].count += 1;
+        return acc;
+      }, {});
+
+      return Object.values(grouped).sort((a, b) => {
+        const bySection = (a.section || '').localeCompare(b.section || '');
+        if (bySection !== 0) return bySection;
+        return String(a.width).localeCompare(String(b.width));
+      }).map((group) => ({
+        item: `${group.section || '—'} / ${group.width}`,
+        seccion: group.section || '—',
+        ancho: group.width,
+        cantidadRequerida: group.total,
+        cantidadComprar: Math.ceil(group.total),
+        estado: getGroupState(group.key)
+      }));
+    }
+
+    function exportGroupedRowsToExcel(filteredRows) {
+      const exportRows = buildExportRows(filteredRows);
+      const sheetData = [
+        ['ITEM / Grupo', 'SECCION', 'ANCHO (mm)', 'Cantidad requerida total', 'Cantidad total a comprar', 'Estado']
+      ];
+
+      exportRows.forEach((row) => {
+        sheetData.push([
+          row.item,
+          row.seccion,
+          row.ancho,
+          row.cantidadRequerida.toFixed(2),
+          row.cantidadComprar,
+          row.estado
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Resumen compra');
+      const safeFileName = (currentFileName || 'export').replace(/\.[^.]+$/, '');
+      XLSX.writeFile(wb, `${safeFileName}_resumen.xlsx`);
+      statusMessage.textContent = 'Archivo Excel descargado con el resumen de compra.';
+    }
+
+    function renderRows() {
+      const filter = normalizeCell(itemFilter.value).toUpperCase();
+      const filteredRows = rows.filter((row) => {
+        if (isNumericItem(row.item)) return false;
+        if (!filter) return true;
+        const lookup = `${normalizeCell(row.item)} ${normalizeCell(row.codigo)}`.toUpperCase();
+        return lookup.includes(filter);
+      });
+
+      const totals = filteredRows.reduce((acc, row) => {
+        acc.count += 1;
+        acc.total += calculateRequiredQuantity(row);
+        return acc;
+      }, { count: 0, total: 0 });
+
+      totalRowsEl.textContent = totals.count;
+      uniqueItemsEl.textContent = new Set(filteredRows.map((row) => normalizeCell(row.item || row.codigo))).size;
+      totalCalculatedEl.textContent = totals.total.toFixed(2);
+
+      drawSectionChart(filteredRows);
+      drawWidthChart(filteredRows);
+      drawStatusChart(filteredRows);
+      renderGroupedRows(filteredRows);
+      resultsBody.innerHTML = '';
+      if (!filteredRows.length) {
+        resultsBody.innerHTML = '<tr><td colspan="7" class="status">No se encontraron registros con ese filtro.</td></tr>';
+        return;
+      }
+
+      filteredRows.forEach((row) => {
+        const tr = document.createElement('tr');
+        const quantity = calculateRequiredQuantity(row);
+        const widthValue = getWidthValue(row);
+        tr.innerHTML = `
+          <td>${normalizeCell(row.item || row.codigo) || '—'}</td>
+          <td>${normalizeCell(row.seccion) || '—'}</td>
+          <td>${normalizeCell(row.codigo) || '—'}</td>
+          <td>${normalizeCell(row.largo) || '—'}</td>
+          <td>${widthValue}</td>
+          <td>${normalizeCell(row.cantTotal) || '—'}</td>
+          <td>${quantity.toFixed(2)}</td>
+        `;
+        resultsBody.appendChild(tr);
+      });
+    }
+
+    function loadSheetData() {
+      if (!workbook) {
+        statusMessage.textContent = 'Primero cargue el archivo Excel.';
+        return;
+      }
+      const sheetName = sheetSelect.value || workbook.SheetNames[0];
+      const ws = workbook.Sheets[sheetName];
+      if (!ws) {
+        statusMessage.textContent = 'No se encontró la hoja seleccionada en el archivo.';
+        return;
+      }
+      const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const headerRowIndex = allRows.findIndex((row) => {
+        const joined = row.map((value) => String(value || '').toUpperCase()).join(' | ');
+        return joined.includes('ITEM') && joined.includes('LARGO') && joined.includes('TOTAL');
+      });
+      const header = allRows[headerRowIndex] || [];
+      const itemIdx = header.findIndex((c) => String(c).includes('ITEM'));
+      const seccionIdx = header.findIndex((c) => String(c).includes('SECCION'));
+      const largoIdx = header.findIndex((c) => String(c).includes('LARGO'));
+      const anchoIdx = header.findIndex((c) => String(c).includes('ANCHO'));
+      const cantTotalIdx = header.findIndex((c) => String(c).includes('CANT') && String(c).includes('TOTAL'));
+      const codigoIdx = header.findIndex((c) => String(c).includes('CODIGO'));
+
+      if (headerRowIndex === -1 || itemIdx === -1 || largoIdx === -1 || cantTotalIdx === -1) {
+        statusMessage.textContent = 'No se encontraron las columnas requeridas en la hoja seleccionada.';
+        return;
+      }
+
+      rows = allRows.slice(headerRowIndex + 1).map((r) => ({
+        item: r[itemIdx] || '',
+        seccion: seccionIdx >= 0 ? r[seccionIdx] : '',
+        codigo: r[codigoIdx] || '',
+        largo: r[largoIdx] || '',
+        ancho: anchoIdx >= 0 ? r[anchoIdx] : '',
+        cantTotal: r[cantTotalIdx] || ''
+      })).filter((row) => {
+        const item = normalizeCell(row.item);
+        const codigo = normalizeCell(row.codigo);
+        const largo = normalizeCell(row.largo);
+        const cantTotal = normalizeCell(row.cantTotal);
+        return item !== '' || codigo !== '' || largo !== '' || cantTotal !== '';
+      });
+
+      statusMessage.textContent = `Se cargaron ${rows.length} registros desde la hoja ${sheetName}.`;
+      renderRows();
+    }
+
+    async function loadWorkbookFromPath(path) {
+      try {
+        const response = await fetch(path);
+        if (!response.ok) throw new Error(`No se pudo abrir ${path}`);
+        const buffer = await response.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: 'array' });
+        populateSheets(wb);
+        statusMessage.textContent = `Se cargó el libro ${path} correctamente.`;
+        loadSheetData();
+      } catch (error) {
+        statusMessage.textContent = `No se pudo cargar automáticamente el libro: ${error.message}. Puede seleccionar el archivo manualmente.`;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.xlsm,.xls';
+        input.onchange = (event) => {
+          const file = event.target.files[0];
+          if (file) parseWorkbook(file);
+        };
+        input.click();
+      }
+    }
+
+    groupedResultsBody.addEventListener('change', (event) => {
+      const select = event.target;
+      if (select.classList.contains('status-select')) {
+        const groupKey = select.getAttribute('data-group-key');
+        if (groupKey) {
+          setGroupState(groupKey, select.value);
+          renderRows();
+        }
+      }
+    });
+
+    loadButton.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    refreshButton.addEventListener('click', () => {
+      if (workbook) {
+        statusMessage.textContent = 'Actualizando datos desde el archivo cargado…';
+        loadSheetData();
+      } else {
+        statusMessage.textContent = 'No hay un archivo cargado para actualizar.';
+      }
+    });
+
+    exportButton.addEventListener('click', () => {
+      const filter = normalizeCell(itemFilter.value).toUpperCase();
+      const filteredRows = rows.filter((row) => {
+        if (isNumericItem(row.item)) return false;
+        if (!filter) return true;
+        const lookup = `${normalizeCell(row.item)} ${normalizeCell(row.codigo)}`.toUpperCase();
+        return lookup.includes(filter);
+      });
+      exportGroupedRowsToExcel(filteredRows);
+    });
+
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (file) {
+        parseWorkbook(file);
+      }
+    });
+
+    sheetSelect.addEventListener('change', loadSheetData);
+    itemFilter.addEventListener('input', renderRows);
+
+    loadWorkbookFromPath('./ENT-1 ESTRUCTURA TARAPOA_ (1).xlsx');
+  </script>
+</body>
+</html>
